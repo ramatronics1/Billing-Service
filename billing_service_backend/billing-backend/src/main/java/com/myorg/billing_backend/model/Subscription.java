@@ -2,6 +2,7 @@ package com.myorg.billing_backend.model;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
+import com.myorg.billing_backend.model.SubscriptionStatus;
 
 /**
  * Minimal Subscription entity mapped to V1 schema.
@@ -30,8 +31,9 @@ public class Subscription {
     @Column(name = "end_date")
     private LocalDate endDate;
 
-    @Column(name = "status")
-    private String status;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private SubscriptionStatus status;
 
     @Column(name = "auto_renew")
     private Boolean autoRenew = Boolean.TRUE;
@@ -43,7 +45,7 @@ public class Subscription {
 
     public Subscription(Long tenantId, Long customerId, Long planId,
                         LocalDate startDate, LocalDate endDate,
-                        String status, Boolean autoRenew, String metadata) {
+                        SubscriptionStatus status, Boolean autoRenew, String metadata) {
         this.tenantId = tenantId;
         this.customerId = customerId;
         this.planId = planId;
@@ -73,8 +75,8 @@ public class Subscription {
     public LocalDate getEndDate() { return endDate; }
     public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public SubscriptionStatus getStatus() { return status; }
+    public void setStatus(SubscriptionStatus status) { this.status = status; }
 
     public Boolean getAutoRenew() { return autoRenew; }
     public void setAutoRenew(Boolean autoRenew) { this.autoRenew = autoRenew; }

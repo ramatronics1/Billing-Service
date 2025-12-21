@@ -4,12 +4,10 @@ import com.myorg.billing_backend.dto.SubscriptionRequest;
 import com.myorg.billing_backend.dto.SubscriptionResponse;
 import com.myorg.billing_backend.exception.ResourceNotFoundException;
 import com.myorg.billing_backend.mapper.SubscriptionMapper;
-import com.myorg.billing_backend.model.Subscription;
+import com.myorg.billing_backend.model.*;
 import com.myorg.billing_backend.repo.CustomerRepository;
 import com.myorg.billing_backend.repo.PlanRepository;
 import com.myorg.billing_backend.repo.SubscriptionRepository;
-import com.myorg.billing_backend.model.Customer;
-import com.myorg.billing_backend.model.Plan;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,103 +46,66 @@ public class SubscriptionService {
 
     @Transactional
     public SubscriptionResponse create(SubscriptionRequest req) {
-        // Validate customer exists and belongs to tenant
+
         Customer customer = customerRepo.findById(req.getCustomerId())
-                .orElseThrow(() -> new ResourceNotFoundException("Customer not found: " + req.getCustomerId()));
-        if (!customer.getTenantId().equals(req.getTenantId())) {
-            throw new IllegalArgumentException("Customer does not belong to tenant: " + req.getTenantId());
-        }
+                .orElseThrow(() -> new ResourceNotFoundException("Customer not found"));
 
-        // Validate plan exists and belongs to tenant
         Plan plan = planRepo.findById(req.getPlanId())
-                .orElseThrow(() -> new ResourceNotFoundException("Plan not found: " + req.getPlanId()));
-        if (!plan.getTenantId().equals(req.getTenantId())) {
-            throw new IllegalArgumentException("Plan does not belong to tenant: " + req.getTenantId());
-        }
+                .orElseThrow(() -> new ResourceNotFoundException("Plan not found"));
 
-        // Build entity
         Subscription s = mapper.toEntity(req);
 
-        // Default start date & status logic
         LocalDate today = LocalDate.now();
-        if (s.getStartDate() == null) {
-            s.setStartDate(today);
-            s.setStatus("active");
+        s.setStartDate(s.getStartDate() == null ? today : s.getStartDate());
+
+        if (s.getStartDate().isAfter(today)) {
+            s.setStatus(SubscriptionStatus.SCHEDULED);
         } else {
-            if (s.getStartDate().isAfter(today)) {
-                s.setStatus("scheduled");
-            } else {
-                s.setStatus("active");
-            }
+            s.setStatus(SubscriptionStatus.ACTIVE);
         }
 
-        // default autoRenew if null
-        if (s.getAutoRenew() == null) s.setAutoRenew(Boolean.TRUE);
+        if (s.getAutoRenew() == null) {
+            s.setAutoRenew(true);
+        }
 
-        Subscription saved = repo.save(s);
-        return mapper.toResponse(saved);
+        return mapper.toResponse(repo.save(s));
     }
 
-    @Transactional
-    public SubscriptionResponse update(Long id, SubscriptionRequest req) {
-        Subscription s = repo.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Subscription not found: " + id));
-
-        // If updating plan or customer, validate tenant consistency
-        if (req.getCustomerId() != null && !req.getCustomerId().equals(s.getCustomerId())) {
-            var customer = customerRepo.findById(req.getCustomerId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Customer not found: " + req.getCustomerId()));
-            if (!customer.getTenantId().equals(s.getTenantId())) {
-                throw new IllegalArgumentException("Customer does not belong to subscription tenant");
-            }
-        }
-
-        if (req.getPlanId() != null && !req.getPlanId().equals(s.getPlanId())) {
-            var plan = planRepo.findById(req.getPlanId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Plan not found: " + req.getPlanId()));
-            if (!plan.getTenantId().equals(s.getTenantId())) {
-                throw new IllegalArgumentException("Plan does not belong to subscription tenant");
-            }
-        }
-
-        mapper.updateEntityFromRequest(req, s);
-
-        // If startDate moved to future, set scheduled
-        LocalDate today = LocalDate.now();
-        if (s.getStartDate() != null && s.getStartDate().isAfter(today)) {
-            s.setStatus("scheduled");
-        }
-
-        Subscription saved = repo.save(s);
-        return mapper.toResponse(saved);
-    }
-
-    /**
-     * Cancel subscription.
-     * If immediate==true: mark canceled and set endDate = today.
-     * If immediate==false: set autoRenew = false (subscription remains active until period end).
-     */
     @Transactional
     public SubscriptionResponse cancel(Long id, boolean immediate) {
         Subscription s = repo.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Subscription not found: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Subscription not found"));
+
+        s.setAutoRenew(false);
 
         if (immediate) {
-            s.setStatus("canceled");
+            s.setStatus(SubscriptionStatus.CANCELED);
             s.setEndDate(LocalDate.now());
-            s.setAutoRenew(Boolean.FALSE);
-        } else {
-            // mark not to auto renew; actual endDate will be computed by billing job later
-            s.setAutoRenew(Boolean.FALSE);
         }
 
-        Subscription saved = repo.save(s);
-        return mapper.toResponse(saved);
+        return mapper.toResponse(repo.save(s));
+    }
+
+    @Transactional
+    public SubscriptionResponse resume(Long id) {
+        Subscription s = repo.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Subscription not found"));
+
+        if (s.getStatus() != SubscriptionStatus.PAUSED) {
+            throw new IllegalStateException("Only paused subscriptions can be resumed");
+        }
+
+        s.setStatus(SubscriptionStatus.ACTIVE);
+        s.setAutoRenew(true);
+
+        return mapper.toResponse(repo.save(s));
     }
 
     @Transactional
     public void delete(Long id) {
-        if (!repo.existsById(id)) throw new ResourceNotFoundException("Subscription not found: " + id);
+        if (!repo.existsById(id)) {
+            throw new ResourceNotFoundException("Subscription not found");
+        }
         repo.deleteById(id);
     }
 }

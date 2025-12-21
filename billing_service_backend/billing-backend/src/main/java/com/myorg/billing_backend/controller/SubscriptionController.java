@@ -21,34 +21,32 @@ public class SubscriptionController {
     }
 
     @GetMapping
-    public ResponseEntity<List<SubscriptionResponse>> listByTenant(@RequestParam Long tenantId) {
-        return ResponseEntity.ok(service.findAllByTenant(tenantId));
+    public List<SubscriptionResponse> list(@RequestParam Long tenantId) {
+        return service.findAllByTenant(tenantId);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<SubscriptionResponse> get(@PathVariable Long id) {
-        return ResponseEntity.ok(service.findById(id));
+    public SubscriptionResponse get(@PathVariable Long id) {
+        return service.findById(id);
     }
 
     @PostMapping
     public ResponseEntity<SubscriptionResponse> create(@Valid @RequestBody SubscriptionRequest req) {
         SubscriptionResponse created = service.create(req);
-        return ResponseEntity.created(URI.create("/api/subscriptions/" + created.getId())).body(created);
+        return ResponseEntity
+                .created(URI.create("/api/subscriptions/" + created.getId()))
+                .body(created);
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<SubscriptionResponse> update(@PathVariable Long id, @Valid @RequestBody SubscriptionRequest req) {
-        return ResponseEntity.ok(service.update(id, req));
-    }
-
-    /**
-     * Cancel subscription.
-     * Query param immediate=true/false (default true)
-     */
     @PostMapping("/{id}/cancel")
-    public ResponseEntity<SubscriptionResponse> cancel(@PathVariable Long id,
-                                                       @RequestParam(defaultValue = "true") boolean immediate) {
-        return ResponseEntity.ok(service.cancel(id, immediate));
+    public SubscriptionResponse cancel(@PathVariable Long id,
+                                       @RequestParam(defaultValue = "true") boolean immediate) {
+        return service.cancel(id, immediate);
+    }
+
+    @PostMapping("/{id}/resume")
+    public SubscriptionResponse resume(@PathVariable Long id) {
+        return service.resume(id);
     }
 
     @DeleteMapping("/{id}")

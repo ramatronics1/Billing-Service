@@ -11,6 +11,7 @@ public class InvoiceMapper {
         return new InvoiceResponse(
                 i.getId(),
                 i.getInvoiceNo(),
+                i.getTenantId(),
                 i.getAmountCents(),
                 i.getCurrency(),
                 i.getStatus(),

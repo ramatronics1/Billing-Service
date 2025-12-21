@@ -5,6 +5,7 @@ import com.myorg.billing_backend.repo.*;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.myorg.billing_backend.model.SubscriptionStatus;
 
 import java.time.*;
 import java.util.List;
@@ -38,6 +39,7 @@ public class BillingService {
     @Scheduled(fixedDelayString = "${billing.scheduler.delay:60000}")
     public void runBillingCycle() {
         try {
+            processSubscriptionExpiry();
             processInvoiceGeneration();
             processPaymentAttempts();
         } catch (Exception ex) {
@@ -58,7 +60,7 @@ public class BillingService {
         LocalDate today = LocalDate.now();
 
         for (Subscription s : subs) {
-            if (!"active".equalsIgnoreCase(s.getStatus())) continue;
+            if (s.getStatus() != SubscriptionStatus.ACTIVE) continue;
             // check if there's any open invoice for this subscription's tenant for now
             // Simplification: we create invoice per subscription if there is no OPEN invoice in DB with same tenant and similar amount.
             boolean hasOpen = invoiceRepo.findByTenantIdAndStatus(s.getTenantId(), "open").stream()
@@ -148,6 +150,22 @@ public class BillingService {
                 pa.setStatus("failed");
                 attemptRepo.save(pa);
             }
+        }
+    }
+
+    @Transactional
+    public void processSubscriptionExpiry() {
+        LocalDate today = LocalDate.now();
+
+        List<Subscription> expiredSubs =
+                subscriptionRepo.findByStatusAndAutoRenewFalseAndEndDateBefore(
+                        SubscriptionStatus.ACTIVE,
+                        today
+                );
+
+        for (Subscription sub : expiredSubs) {
+            sub.setStatus(SubscriptionStatus.EXPIRED);
+            subscriptionRepo.save(sub);
         }
     }
 

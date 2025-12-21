@@ -7,6 +7,7 @@ public class InvoiceResponse {
 
     private Long id;
     private String invoiceNo;
+    private Long tenantId;
     private Long amountCents;
     private String currency;
     private String status;
@@ -18,6 +19,7 @@ public class InvoiceResponse {
     public InvoiceResponse(
             Long id,
             String invoiceNo,
+            Long tenantId,
             Long amountCents,
             String currency,
             String status,
@@ -26,6 +28,7 @@ public class InvoiceResponse {
     ) {
         this.id = id;
         this.invoiceNo = invoiceNo;
+        this.tenantId = tenantId;
         this.amountCents = amountCents;
         this.currency = currency;
         this.status = status;
@@ -35,6 +38,7 @@ public class InvoiceResponse {
 
     public Long getId() { return id; }
     public String getInvoiceNo() { return invoiceNo; }
+    public Long getTenantId() { return tenantId; }
     public Long getAmountCents() { return amountCents; }
     public String getCurrency() { return currency; }
     public String getStatus() { return status; }

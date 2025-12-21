@@ -1,15 +1,17 @@
 package com.myorg.billing_backend.dto;
 
 import java.time.LocalDate;
+import com.myorg.billing_backend.model.SubscriptionStatus;
 
 public class SubscriptionResponse {
+
     private Long id;
     private Long tenantId;
     private Long customerId;
     private Long planId;
     private LocalDate startDate;
     private LocalDate endDate;
-    private String status;
+    private SubscriptionStatus status;
     private Boolean autoRenew;
     private String metadata;
 
@@ -34,8 +36,8 @@ public class SubscriptionResponse {
     public LocalDate getEndDate() { return endDate; }
     public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+    public SubscriptionStatus getStatus() { return status; }
+    public void setStatus(SubscriptionStatus status) { this.status = status; }
 
     public Boolean getAutoRenew() { return autoRenew; }
     public void setAutoRenew(Boolean autoRenew) { this.autoRenew = autoRenew; }
